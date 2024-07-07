@@ -4,14 +4,14 @@ import numpy as np
 matches = pd.read_csv('ipl-matches.csv')
 
 def teamsAPI():
-    teams = list(set((list(matches["Team1"]) + list(matches["Team2"]))))
+    teams = matches.Team1.unique()
     team_dict = {
         "teams" : teams
     }
     return team_dict
 
 def team_vs_team(team1, team2):
-    teams = list(set((list(matches["Team1"]) + list(matches["Team2"]))))
+    teams = matches.Team1.unique()
 
     if (team1 in teams) and (team2 in teams):
         temp_df = matches[((matches['Team1'] == team1) & (matches['Team2'] == team2)) | (

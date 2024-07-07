@@ -27,4 +27,11 @@ def team_record():
     response = balls.teamAPI(team_name)
     return response
 
+@app.route('/api/batting-record')
+def batting_record():
+    batsman_name = request.args.get('batsman')
+    response = balls.batsmanAPI(batsman_name)
+    return response
+
+
 app.run(debug=True)
