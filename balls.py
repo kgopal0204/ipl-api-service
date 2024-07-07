@@ -126,11 +126,100 @@ def batsmanAPI(batsman, balls=batter_data):
         TEAMS = matches.Team1.unique()
         against = {team: batsmanVsTeam(batsman, team, df) for team in TEAMS}
         data = {
-            batsman: {'overall': self_record,
-                      'against': against}
+            batsman: {'Overall Batting Record': self_record,
+                      'Against All Teams Batting Record': against}
         }
     else:
         data = {'message' : 'Invalid Batsman Name'}
 
     return json.dumps(data, cls=NpEncoder)
 
+
+bowler_data = batter_data.copy()
+
+def bowlerRun(x):
+    if x[0] in ['penalty', 'legbyes', 'byes']:
+        return 0
+    else:
+        return x[1]
+bowler_data['bowler_run'] = bowler_data[['extra_type', 'total_run']].apply(bowlerRun, axis=1)
+
+def bowlerWicket(x):
+    if x[0] in ['caught', 'caught and bowled', 'bowled', 'stumped', 'lbw', 'hit wicket']:
+        return x[1]
+    else:
+        return 0
+bowler_data['isBowlerWicket'] = bowler_data[['kind', 'isWicketDelivery']].apply(bowlerWicket, axis=1)
+
+
+def bowlerRecord(bowler, df):
+
+    df = df[df['bowler'] == bowler]
+    inngs = df.ID.unique().shape[0]
+    nballs = df[~(df.extra_type.isin(['wides', 'noballs']))].shape[0]
+    runs = df['bowler_run'].sum()
+    if nballs:
+        eco = round((runs / nballs) * 6, 2)
+    else:
+        eco = 0
+    fours = df[(df.batsman_run == 4) & (df.non_boundary == 0)].shape[0]
+    sixes = df[(df.batsman_run == 6) & (df.non_boundary == 0)].shape[0]
+
+    wicket = df.isBowlerWicket.sum()
+    if wicket:
+        avg = round(runs / wicket, 2)
+    else:
+        avg = np.inf
+
+    if wicket:
+        strike_rate = round(nballs / wicket, 2)
+    else:
+        strike_rate = np.nan
+
+    gb = df.groupby('ID').sum()
+    w3 = gb[(gb.isBowlerWicket >= 3)].shape[0]
+
+    best_wicket = gb.sort_values(['isBowlerWicket', 'bowler_run'], ascending=[False, True])[
+        ['isBowlerWicket', 'bowler_run']].head(1).values
+    if best_wicket.size > 0:
+
+        best_figure = f'{best_wicket[0][0]}/{best_wicket[0][1]}'
+    else:
+        best_figure = np.nan
+    mom = df[df.Player_of_Match == bowler].drop_duplicates('ID', keep='first').shape[0]
+    data = {
+        'innings': inngs,
+        'wicket': wicket,
+        'economy': eco,
+        'average': avg,
+        'strikeRate': strike_rate,
+        'fours_conceded': fours,
+        'sixes_conceded': sixes,
+        'best_figure': best_figure,
+        '3+Wickets': w3,
+        'mom': mom
+    }
+
+    return data
+
+
+def bowlerVsTeam(bowler, team, df):
+    df = df[df.BattingTeam == team].copy()
+    return bowlerRecord(bowler, df)
+
+
+def bowlerAPI(bowler, balls=bowler_data):
+    bowlers = list(set(list(balls['batter']) + list(balls['non-striker']) + list(balls.bowler.unique())))
+    if bowler in bowlers:
+        df = balls[balls.innings.isin([1, 2])]  # Excluding Super overs
+        self_record = bowlerRecord(bowler, df=df)
+        TEAMS = matches.Team1.unique()
+        against = {team: bowlerVsTeam(bowler, team, df) for team in TEAMS}
+        data = {
+            bowler: {'Overall Bowling Record': self_record,
+                     'Against All Teams Bowling Record': against}
+        }
+    else:
+        data = {"message" : "Invalid Bowler Name"}
+
+    return json.dumps(data, cls=NpEncoder)

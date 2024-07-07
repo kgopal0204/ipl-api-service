@@ -33,5 +33,11 @@ def batting_record():
     response = balls.batsmanAPI(batsman_name)
     return response
 
+@app.route('/api/bowling-record')
+def bowling_record():
+    bowler_name = request.args.get('bowler')
+    response = balls.bowlerAPI(bowler_name)
+    return response
+
 
 app.run(debug=True)
