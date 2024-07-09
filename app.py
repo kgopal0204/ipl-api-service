@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 import ipl
 import balls
 
@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "IPL Analysis"
+    return render_template('home.html')
 
 @app.route('/api/teams')
 def teams():
